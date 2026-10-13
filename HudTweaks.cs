@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Game.UI;
 using HarmonyLib;
+using Tutorial;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -108,8 +109,83 @@ namespace UpdatedCamera
             }
 
             float scale = Settings.ContractsScale.Value;
-            _moved.anchoredPosition = _originalPosition + new Vector2(Settings.ContractsX.Value, Settings.ContractsY.Value);
+            Vector2 position = _originalPosition + new Vector2(Settings.ContractsX.Value, Settings.ContractsY.Value);
+            _moved.anchoredPosition = position;
             _moved.localScale = _originalScale * scale;
+
+            // The tutorial advisor sits where the moved box now is; slide the box below it while
+            // it's showing. Unscaled time, because the tutorial often pauses the game.
+            float target = AdvisorPushDown();
+            float t = 1f - Mathf.Exp(-AdvisorSlideSpeed * Time.unscaledDeltaTime);
+            _advisorSlide = Mathf.Abs(target - _advisorSlide) < 0.5f ? target : Mathf.Lerp(_advisorSlide, target, t);
+            _moved.anchoredPosition = position - new Vector2(0f, _advisorSlide);
+        }
+
+        // Gap between the advisor's bottom edge and the contracts box, in the box's parent units.
+        private const float AdvisorGap = 10f;
+        private const float AdvisorSlideSpeed = 12f;
+
+        // Parts of the advisor that are actually visible; its "Gradient" child is a 1500px backdrop.
+        private static readonly string[] AdvisorParts = { "ImageFrame", "ScrollFrame", "ScrollFrame/ButtonSkip" };
+
+        private static float _advisorSlide;
+        private static readonly Vector3[] Corners = new Vector3[4];
+
+        // How far down (in the box's parent units) the box must move to clear the advisor,
+        // measured with the box at its normal moved position. 0 when the advisor isn't showing.
+        private static float AdvisorPushDown()
+        {
+            if (SerializedMonoBehaviourSingleton<TutorialManager>.InstanceIsNull)
+            {
+                return 0f;
+            }
+            TutorialWindowAdvisor advisor = SerializedMonoBehaviourSingleton<TutorialManager>.Instance.TutorialWindowAdvisor;
+            if (advisor == null || !advisor.gameObject.activeInHierarchy || !(_moved.parent is RectTransform parent))
+            {
+                return 0f;
+            }
+
+            float advisorBottom = float.MaxValue;
+            float advisorLeft = float.MaxValue;
+            float advisorRight = float.MinValue;
+            foreach (string path in AdvisorParts)
+            {
+                Transform part = advisor.transform.Find(path);
+                if (part is RectTransform rect && part.gameObject.activeInHierarchy)
+                {
+                    rect.GetWorldCorners(Corners);
+                    Vector3 min = parent.InverseTransformPoint(Corners[0]);
+                    Vector3 max = parent.InverseTransformPoint(Corners[2]);
+                    advisorBottom = Mathf.Min(advisorBottom, min.y);
+                    advisorLeft = Mathf.Min(advisorLeft, min.x);
+                    advisorRight = Mathf.Max(advisorRight, max.x);
+                }
+            }
+            if (advisorBottom == float.MaxValue)
+            {
+                return 0f;
+            }
+
+            _moved.GetWorldCorners(Corners);
+            Vector3 boxMin = parent.InverseTransformPoint(Corners[0]);
+            Vector3 boxMax = parent.InverseTransformPoint(Corners[2]);
+            // A box moved off to the side doesn't need to make room.
+            if (boxMax.x <= advisorLeft || boxMin.x >= advisorRight)
+            {
+                return 0f;
+            }
+            float push = Mathf.Max(0f, boxMax.y - (advisorBottom - AdvisorGap));
+
+            // Never push the bottom of the box off the screen; if there isn't room, the advisor
+            // (drawn on top) covers the top of the box instead.
+            Canvas canvas = _moved.GetComponentInParent<Canvas>();
+            if (canvas != null && canvas.rootCanvas.transform is RectTransform screen)
+            {
+                screen.GetWorldCorners(Corners);
+                float screenBottom = parent.InverseTransformPoint(Corners[0]).y;
+                push = Mathf.Min(push, Mathf.Max(0f, boxMin.y - screenBottom));
+            }
+            return push;
         }
 
         // Level 0 is the contract list itself, 1 its parent, and so on (stops at the canvas).

@@ -13,7 +13,7 @@ namespace UpdatedCamera
     {
         public const string Guid = "laserbees.solarexpanse.updatedcamera";
         public const string Name = "Updated Camera";
-        public const string Version = "1.0.0";
+        public const string Version = "1.1.0";
     }
 
     // BaseUnityPlugin is a Unity MonoBehaviour: BepInEx creates it once when the game starts,

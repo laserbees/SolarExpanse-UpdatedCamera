@@ -29,7 +29,8 @@ when you ask it to.
 
 **HUD**
 - Hides the company logo in the top-left corner.
-- Moves and resizes the contracts box.
+- Moves and resizes the contracts box. While the tutorial advisor is showing, the box slides down
+  just below it so the two don't overlap, and slides back when the advisor closes.
 
 **Unchanged:** number-key camera shortcuts, clicking notifications, and the camera following a
 ship or trajectory you're already following when it lands or ends.

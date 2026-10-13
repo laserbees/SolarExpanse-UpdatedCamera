@@ -336,6 +336,31 @@ position, scale and layout setting, and any `LayoutElement` the mod added is des
 `AncestorAt` walks up the hierarchy but stops below the canvas, so a large level can't move the
 whole canvas.
 
+### Making room for the tutorial advisor
+
+The tutorial's advisor box (portrait, typed-out text and Skip button) isn't positioned by code:
+`TutorialWindowAdvisor.SetData` ignores the position it's given. In the scene it's anchored to the
+top-left corner at (325, -4), and at 1080p it reaches about 203px down. The unmodded contracts box
+starts at 237px, so the two were simply placed one above the other by hand. Moving the box up puts
+it underneath the advisor, which draws on top because `Windows` comes after `LeftPanel`.
+
+While `TutorialManager.Instance.TutorialWindowAdvisor` is active, the box is pushed down until its
+top edge is 10 units below the advisor's lowest visible part. Only `ImageFrame`, `ScrollFrame` and
+`ScrollFrame/ButtonSkip` are measured; the advisor's `Gradient` child is a 1500px-tall backdrop and
+would push the box off screen. Both edges are converted into the box's parent space, measured with
+the box at its configured position, so the push is only as much as needed (none if the box is
+already lower). Two limits apply:
+
+- If the box doesn't overlap the advisor horizontally (moved aside with `ContractsBoxX`), it isn't
+  pushed at all.
+- The push never takes the box's bottom edge below the bottom of the root canvas. If there isn't
+  enough room, the box goes as low as it can and the advisor, drawn on top, covers its top.
+
+The box slides to and from that position with an exponential ease on unscaled time, since the
+tutorial often pauses the game. The pointer windows (`TutorialWindowCenter/Left/Right/Top/Bottom`)
+need no change: `TutorialManager.Update` re-reads the highlighted element's screen rect every frame,
+so they already follow the moved box.
+
 ---
 
 ## Settings panel
@@ -412,4 +437,4 @@ of these, the matching feature is the one to check.
 `UIWindow`: `Open`, `ShowingOrHiding`. `SpaceCraftInfoWindow.OpenedFrom`.
 `ObjectInfo.objectTypes`. `HighlightHoverObject.MyTargetObjectInfo`.
 `ChangeTargetButtons.idMyTargetObjectInfo`. `MissionsLabelsMainUI.MissionInfo`.
-`CurrentContractListMainUI`.
+`CurrentContractListMainUI`. `TutorialManager.TutorialWindowAdvisor` (and the advisor's child names `ImageFrame`, `ScrollFrame`, `ButtonSkip`).
