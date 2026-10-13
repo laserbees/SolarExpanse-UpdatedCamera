@@ -99,6 +99,8 @@ Close the game before building; Windows locks the DLL while the game is running.
 - `HudTweaks.cs`: hides the company logo, moves and resizes the contracts box
 - `TuningPanel.cs`: the F9 settings panel
 
+See [HOW_IT_WORKS.md](HOW_IT_WORKS.md) for how each change works and which parts of the game it hooks.
+
 ## License
 
 [MIT](LICENSE)
